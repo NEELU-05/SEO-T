@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO Checker</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="container">
+        <h2>SEO Checker</h2>
+
+        <div class="form-group">
+            <label for="targetDate">Target Date (e.g. Nov 6)</label>
+            <input type="text" id="targetDate" placeholder="Enter date or auto-detect" list="dateOptions">
+            <datalist id="dateOptions"></datalist>
+            <div id="dateChips" class="date-chips"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="fileInput">Or Upload File (.txt, .docx)</label>
+            <input type="file" id="fileInput" accept=".txt,.docx">
+        </div>
+
+        <button id="analyzeBtn">Analyze Doc</button>
+
+        <div id="results" class="results-area hidden">
+            <h3>Analysis Results</h3>
+
+            <!-- Summary Statistics -->
+            <div class="summary-stats">
+                <div class="stat-box">
+                    <div class="stat-label">Total Keywords</div>
+                    <div class="stat-value" id="totalKeywords">0</div>
+                </div>
+                <div class="stat-box pass">
+                    <div class="stat-label">Passing</div>
+                    <div class="stat-value" id="passingKeywords">0</div>
+                </div>
+                <div class="stat-box warning">
+                    <div class="stat-label">Warnings</div>
+                    <div class="stat-value" id="warningKeywords">0</div>
+                </div>
+                <div class="stat-box fail">
+                    <div class="stat-label">Failing</div>
+                    <div class="stat-value" id="failingKeywords">0</div>
+                </div>
+            </div>
+
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+    <script src="../scripts/mammoth.browser.min.js"></script>
+    <script src="../scripts/analyzer.js"></script>
+    <script src="popup.js"></script>
+</body>
+
+</html>
