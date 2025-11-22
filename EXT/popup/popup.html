@@ -12,48 +12,106 @@
     <div class="container">
         <h2>SEO Checker</h2>
 
-        <div class="form-group">
-            <label for="targetDate">Target Date (e.g. Nov 6)</label>
-            <input type="text" id="targetDate" placeholder="Enter date or auto-detect" list="dateOptions">
-            <datalist id="dateOptions"></datalist>
-            <div id="dateChips" class="date-chips"></div>
+        <!-- Tab Navigation -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="analyze">Analyze</button>
+            <button class="tab-btn" data-tab="history">History</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
         </div>
 
-        <div class="form-group">
-            <label for="fileInput">Or Upload File (.txt, .docx)</label>
-            <input type="file" id="fileInput" accept=".txt,.docx">
-        </div>
-
-        <button id="analyzeBtn">Analyze Doc</button>
-
-        <div id="results" class="results-area hidden">
-            <h3>Analysis Results</h3>
-
-            <!-- Summary Statistics -->
-            <div class="summary-stats">
-                <div class="stat-box">
-                    <div class="stat-label">Total Keywords</div>
-                    <div class="stat-value" id="totalKeywords">0</div>
-                </div>
-                <div class="stat-box pass">
-                    <div class="stat-label">Passing</div>
-                    <div class="stat-value" id="passingKeywords">0</div>
-                </div>
-                <div class="stat-box warning">
-                    <div class="stat-label">Warnings</div>
-                    <div class="stat-value" id="warningKeywords">0</div>
-                </div>
-                <div class="stat-box fail">
-                    <div class="stat-label">Failing</div>
-                    <div class="stat-value" id="failingKeywords">0</div>
-                </div>
+        <!-- Analyze Tab -->
+        <div id="analyze-tab" class="tab-content active">
+            <div class="form-group">
+                <label for="targetDate">Target Date (e.g. Nov 6)</label>
+                <input type="text" id="targetDate" placeholder="Enter date or auto-detect" list="dateOptions">
+                <datalist id="dateOptions"></datalist>
+                <div id="dateChips" class="date-chips"></div>
             </div>
 
-            <div id="resultsContent"></div>
+            <div class="form-group">
+                <label for="fileInput">Or Upload File (.txt, .docx)</label>
+                <input type="file" id="fileInput" accept=".txt,.docx">
+            </div>
+
+            <div class="button-group">
+                <button id="analyzeBtn" class="primary-btn">Analyze Doc</button>
+                <button id="exportCsvBtn" class="secondary-btn" disabled>Export CSV</button>
+            </div>
+
+            <div id="results" class="results-area hidden">
+                <h3>Analysis Results</h3>
+                <div class="summary-stats">
+                    <div class="stat-box">
+                        <div class="stat-label">Total Keywords</div>
+                        <div class="stat-value" id="totalKeywords">0</div>
+                    </div>
+                    <div class="stat-box pass">
+                        <div class="stat-label">Passing</div>
+                        <div class="stat-value" id="passingKeywords">0</div>
+                    </div>
+                    <div class="stat-box warning">
+                        <div class="stat-label">Warnings</div>
+                        <div class="stat-value" id="warningKeywords">0</div>
+                    </div>
+                    <div class="stat-box fail">
+                        <div class="stat-label">Failing</div>
+                        <div class="stat-value" id="failingKeywords">0</div>
+                    </div>
+                </div>
+                <div id="resultsContent"></div>
+            </div>
         </div>
+
+        <!-- History Tab -->
+        <div id="history-tab" class="tab-content">
+            <div class="history-controls">
+                <button id="clearHistoryBtn" class="danger-btn small-btn">Clear History</button>
+            </div>
+            <div id="historyList" class="history-list">
+                <p class="empty-state">No history yet.</p>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content">
+            <div class="settings-group">
+                <label>History Limit</label>
+                <input type="number" id="historyLimitInput" min="1" max="50" value="20">
+            </div>
+            <div class="settings-group">
+                <button id="saveSettingsBtn" class="primary-btn">Save Settings</button>
+            </div>
+            <div id="settingsMsg"></div>
+        </div>
+
+        <!-- Onboarding Modal -->
+        <div id="onboardingModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Welcome to SEO Checker 3.0</h3>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p><strong>New Features:</strong></p>
+                    <ul>
+                        <li>✅ <strong>Quality Tracking:</strong> See PASS/FAIL status for every keyword.</li>
+                        <li>✅ <strong>Auto-Date:</strong> We now detect dates automatically!</li>
+                        <li>✅ <strong>CSV Export:</strong> Download your reports.</li>
+                    </ul>
+                    <p>Select a date and click <strong>Analyze Doc</strong> to get started.</p>
+                </div>
+                <button id="closeOnboardingBtn" class="primary-btn full-width">Get Started</button>
+            </div>
+        </div>
+
     </div>
     <script src="../scripts/mammoth.browser.min.js"></script>
-    <script src="../scripts/analyzer.js"></script>
+    <script src="../scripts/utils/helpers.js"></script>
+    <script src="../scripts/core/storage_manager.js"></script>
+    <script src="../scripts/parser/parser.js"></script>
+    <script src="../scripts/core/analyzer.js"></script>
+    <script src="../scripts/ui/ui_manager.js"></script>
+    <script src="../scripts/ui/file_handler.js"></script>
     <script src="popup.js"></script>
 </body>
 

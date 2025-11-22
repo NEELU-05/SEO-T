@@ -1,15 +1,46 @@
 // popup.js – main UI logic for SEO Keyword Checker extension
 
 document.addEventListener('DOMContentLoaded', () => {
-    const targetDateInput = document.getElementById('targetDate');
-    const fileInput = document.getElementById('fileInput');
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const resultsArea = document.getElementById('results');
-    const resultsContent = document.getElementById('resultsContent');
+    // Initialize UI Manager
+    const elements = {
+        targetDateInput: document.getElementById('targetDate'),
+        fileInput: document.getElementById('fileInput'),
+        analyzeBtn: document.getElementById('analyzeBtn'),
+        exportCsvBtn: document.getElementById('exportCsvBtn'),
+        resultsArea: document.getElementById('results'),
+        resultsContent: document.getElementById('resultsContent'),
+        dateInput: document.getElementById('targetDate'),
+        dateList: document.getElementById('dateOptions'),
+        dateChips: document.getElementById('dateChips'),
+        totalKeywordsEl: document.getElementById('totalKeywords'),
+        passingKeywordsEl: document.getElementById('passingKeywords'),
+        warningKeywordsEl: document.getElementById('warningKeywords'),
+        failingKeywordsEl: document.getElementById('failingKeywords'),
+        onboardingModal: document.getElementById('onboardingModal'),
+        closeOnboardingBtn: document.getElementById('closeOnboardingBtn'),
+        // Tabs
+        tabBtns: document.querySelectorAll('.tab-btn'),
+        tabContents: document.querySelectorAll('.tab-content'),
+        // History
+        historyList: document.getElementById('historyList'),
+        clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+        // Settings
+        historyLimitInput: document.getElementById('historyLimitInput'),
+        saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+        settingsMsg: document.getElementById('settingsMsg')
+    };
+
+    UIManager.init(elements);
+    UIManager.checkFirstRun();
+    initTabs();
+    loadSettings();
+    loadHistory();
+
+    let lastResults = [];
 
     // Set default date to today's date
     const today = new Date().toISOString().split('T')[0];
-    targetDateInput.value = today;
+    elements.targetDateInput.value = today;
 
     // Auto-detect Google Doc
     detectGoogleDocs();
@@ -24,7 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span>Google Doc detected</span>
                 <span class="status-dot"></span>
             `;
-            document.querySelector('.container').insertBefore(notice, document.querySelector('.form-group'));
+            // Insert before the tabs
+            document.querySelector('.container').insertBefore(notice, document.querySelector('.tabs'));
         }
     }
 
@@ -46,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (response && response.text) {
-                    autoDetectDate(response.text);
+                    UIManager.autoDetectDate(response.text, () => elements.analyzeBtn.click());
                 }
             } catch (e) {
                 console.log('Auto-date failed', e);
@@ -54,92 +86,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     })();
 
-    function autoDetectDate(text) {
-        const dates = Analyzer.findDates(text);
-        const dateInput = document.getElementById('targetDate');
-        const dateList = document.getElementById('dateOptions');
-        const dateChips = document.getElementById('dateChips');
-
-        // Clear existing options
-        dateList.innerHTML = '';
-        dateChips.innerHTML = '';
-
-        if (dates.length > 0) {
-            // Populate datalist and chips
-            dates.forEach((date) => {
-                // Datalist option
-                const option = document.createElement('option');
-                option.value = date;
-                dateList.appendChild(option);
-
-                // Chip
-                const chip = document.createElement('div');
-                chip.className = 'date-chip';
-                chip.textContent = date;
-                chip.addEventListener('click', () => {
-                    dateInput.value = date;
-                    // Highlight active chip
-                    document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('active'));
-                    chip.classList.add('active');
-                    // Trigger analysis for selected date
-                    analyzeBtn.click();
-                });
-                dateChips.appendChild(chip);
-            });
-
-            // Auto-select the first one if input is empty or default
-            if (!dateInput.value || dateInput.value === today) {
-                dateInput.value = dates[0];
-                // Highlight first chip
-                if (dateChips.firstChild) {
-                    dateChips.firstChild.classList.add('active');
-                }
-
-                // Visual feedback
-                dateInput.style.borderColor = '#28a745';
-                dateInput.style.boxShadow = '0 0 0 2px rgba(40, 167, 69, 0.2)';
-                setTimeout(() => {
-                    dateInput.style.borderColor = '';
-                    dateInput.style.boxShadow = '';
-                }, 1500);
-            }
-        }
-    }
-
     // Auto-detect dates when file is uploaded
-    fileInput.addEventListener('change', async () => {
-        if (fileInput.files.length > 0) {
+    elements.fileInput.addEventListener('change', async () => {
+        if (elements.fileInput.files.length > 0) {
             try {
-                const text = await readFile(fileInput.files[0]);
-                autoDetectDate(text);
+                const text = await FileHandler.readFile(elements.fileInput.files[0]);
+                UIManager.autoDetectDate(text, () => elements.analyzeBtn.click());
             } catch (err) {
                 console.error('Error reading file for date detection:', err);
+                UIManager.showError('Error reading file: ' + err.message);
             }
         }
     });
 
-    analyzeBtn.addEventListener('click', async () => {
-        const targetDate = targetDateInput.value.trim();
+    elements.analyzeBtn.addEventListener('click', async () => {
+        const targetDate = elements.targetDateInput.value.trim();
         if (!targetDate) {
-            showError('Please enter a target date.');
+            UIManager.showError('Please enter a target date.');
             return;
         }
 
         let textToAnalyze = '';
 
         // 1. Check File Input
-        if (fileInput.files.length > 0) {
+        if (elements.fileInput.files.length > 0) {
             try {
-                textToAnalyze = await readFile(fileInput.files[0]);
+                textToAnalyze = await FileHandler.readFile(elements.fileInput.files[0]);
             } catch (err) {
-                showError('Error reading file: ' + err.message);
+                UIManager.showError('Error reading file: ' + err.message);
                 return;
             }
         } else {
             // 2. Check Active Tab (Google Doc)
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             if (!tab) {
-                showError('No active tab found.');
+                UIManager.showError('No active tab found.');
                 return;
             }
 
@@ -162,130 +143,119 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response && response.text && response.text.trim().length > 0) {
                     textToAnalyze = response.text;
                     // Update date options again just in case
-                    autoDetectDate(textToAnalyze);
+                    UIManager.autoDetectDate(textToAnalyze);
                 } else {
-                    showError('No text found. Please try selecting all text (Ctrl+A) in the document first.');
+                    UIManager.showError('No text found. Please try selecting all text (Ctrl+A) in the document first.');
                     return;
                 }
             } catch (err) {
                 console.error(err);
-                showError('Could not read document. Please RELOAD the Google Docs tab and try again.');
+                UIManager.showError('Could not read document. Please RELOAD the Google Docs tab and try again.');
                 return;
             }
         }
 
         // 3. Process
-        const results = Analyzer.process(textToAnalyze, targetDate);
+        try {
+            // Show loading state?
+            elements.analyzeBtn.textContent = 'Analyzing...';
+            elements.analyzeBtn.disabled = true;
 
-        if (results.length === 0) {
-            showError(`No submissions found for date: ${targetDate}`);
-        } else {
-            displayResults(results);
+            const results = await Analyzer.process(textToAnalyze, targetDate);
+            lastResults = results; // Store for export
+
+            elements.analyzeBtn.textContent = 'Analyze Doc';
+            elements.analyzeBtn.disabled = false;
+
+            if (results.length === 0) {
+                UIManager.showError(`No submissions found for date: ${targetDate}`);
+            } else {
+                UIManager.displayResults(results);
+
+                // Save to History
+                const summary = {
+                    total: results.length, // Submissions
+                    keywords: results.reduce((acc, sub) => acc + (sub.keywordStats ? sub.keywordStats.length : 0), 0)
+                };
+                StorageManager.saveToHistory({
+                    targetDate,
+                    summary: `${summary.total} submissions, ${summary.keywords} keywords`
+                });
+                loadHistory(); // Refresh history tab
+            }
+        } catch (e) {
+            elements.analyzeBtn.textContent = 'Analyze Doc';
+            elements.analyzeBtn.disabled = false;
+            UIManager.showError('Analysis failed: ' + e.message);
         }
     });
 
-    function displayResults(results) {
-        resultsArea.classList.remove('hidden');
-        resultsContent.innerHTML = '';
+    // CSV Export
+    elements.exportCsvBtn.addEventListener('click', () => {
+        const targetDate = elements.targetDateInput.value.trim() || 'report';
+        UIManager.exportToCsv(lastResults, targetDate);
+    });
 
-        // Calculate summary statistics
-        let totalKeywords = 0;
-        let passingKeywords = 0;
-        let warningKeywords = 0;
-        let failingKeywords = 0;
+    // --- Tab Logic ---
+    function initTabs() {
+        elements.tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Deactivate all
+                elements.tabBtns.forEach(b => b.classList.remove('active'));
+                elements.tabContents.forEach(c => c.classList.remove('active'));
 
-        results.forEach((sub) => {
+                // Activate clicked
+                btn.classList.add('active');
+                const tabId = btn.getAttribute('data-tab');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+    }
+
+    // --- History Logic ---
+    function loadHistory() {
+        const history = StorageManager.getHistory();
+        elements.historyList.innerHTML = '';
+
+        if (history.length === 0) {
+            elements.historyList.innerHTML = '<p class="empty-state">No history yet.</p>';
+            return;
+        }
+
+        history.forEach(item => {
             const div = document.createElement('div');
-            div.className = 'submission-block';
-
-            // Build keyword statistics table
-            let keywordTableHtml = '';
-            if (sub.keywordStats && sub.keywordStats.length > 0) {
-                keywordTableHtml = `
-                    <div class="keyword-stats">
-                        <h5>Keyword Analysis</h5>
-                        <table class="keyword-table">
-                            <thead>
-                                <tr>
-                                    <th>Keyword</th>
-                                    <th>Correct</th>
-                                    <th>Incorrect</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-
-                sub.keywordStats.forEach(stat => {
-                    totalKeywords++;
-                    if (stat.status === 'PASS') passingKeywords++;
-                    else if (stat.status === 'WARNING') warningKeywords++;
-                    else if (stat.status === 'FAIL') failingKeywords++;
-
-                    keywordTableHtml += `
-                        <tr class="status-${stat.status.toLowerCase()}">
-                            <td>${stat.keyword}</td>
-                            <td class="correct">${stat.correctMatches}</td>
-                            <td class="incorrect">${stat.incorrectMatches}</td>
-                            <td>${stat.totalMatches}</td>
-                            <td><span class="badge badge-${stat.status.toLowerCase()}">${stat.status}</span></td>
-                        </tr>
-                    `;
-                });
-
-                keywordTableHtml += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
-
+            div.className = 'history-item';
             div.innerHTML = `
-                <h4>${sub.title}</h4>
-                ${keywordTableHtml}
-                <div class="preview-box">
-                    ${sub.highlightedHtml}
-                </div>
+                <div class="history-date">${new Date(item.date).toLocaleString()}</div>
+                <div class="history-summary">Target: ${item.targetDate}</div>
+                <div class="history-details">${item.summary}</div>
             `;
-
-            resultsContent.appendChild(div);
-        });
-
-        // Update summary statistics
-        document.getElementById('totalKeywords').textContent = totalKeywords;
-        document.getElementById('passingKeywords').textContent = passingKeywords;
-        document.getElementById('warningKeywords').textContent = warningKeywords;
-        document.getElementById('failingKeywords').textContent = failingKeywords;
-    }
-
-    function showError(msg) {
-        resultsArea.classList.remove('hidden');
-        resultsContent.innerHTML = `<p class="fail">${msg}</p>`;
-    }
-
-    async function readFile(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-
-            if (file.name.endsWith('.docx')) {
-                reader.onload = function (event) {
-                    const arrayBuffer = event.target.result;
-                    if (window.mammoth) {
-                        window.mammoth.extractRawText({ arrayBuffer: arrayBuffer })
-                            .then(result => resolve(result.value))
-                            .catch(err => reject(err));
-                    } else {
-                        reject(new Error('Mammoth library not loaded for .docx'));
-                    }
-                };
-                reader.readAsArrayBuffer(file);
-            } else {
-                reader.onload = function (event) {
-                    resolve(event.target.result);
-                };
-                reader.readAsText(file);
-            }
+            // Clicking history item could reload it? 
+            // For now, just a record.
+            elements.historyList.appendChild(div);
         });
     }
+
+    elements.clearHistoryBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all history?')) {
+            StorageManager.clearHistory();
+            loadHistory();
+        }
+    });
+
+    // --- Settings Logic ---
+    function loadSettings() {
+        const settings = StorageManager.getSettings();
+        elements.historyLimitInput.value = settings.historyLimit;
+    }
+
+    elements.saveSettingsBtn.addEventListener('click', () => {
+        const limit = parseInt(elements.historyLimitInput.value, 10);
+        if (limit > 0) {
+            StorageManager.saveSettings({ historyLimit: limit });
+            elements.settingsMsg.textContent = 'Settings saved!';
+            elements.settingsMsg.style.color = 'green';
+            setTimeout(() => elements.settingsMsg.textContent = '', 2000);
+        }
+    });
 });

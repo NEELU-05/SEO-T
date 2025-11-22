@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>SEO Checker Tests</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        .pass {
+            color: green;
+        }
+
+        .fail {
+            color: red;
+            font-weight: bold;
+        }
+
+        .test-case {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>SEO Checker Test Suite</h1>
+    <div id="results"></div>
+
+    <!-- Dependencies -->
+    <script src="../scripts/utils/helpers.js"></script>
+    <script src="../scripts/parser/parser.js"></script>
+    <script src="../scripts/core/analyzer.js"></script>
+
+    <!-- Tests -->
+    <script src="test_core.js"></script>
+</body>
+
+</html>
